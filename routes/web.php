@@ -1,7 +1,10 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\MarkerController;
 
-Route::get('/', function () {
-    return view('welcome');
-});
+
+Route::post('/markers', [MarkerController::class, 'store']);
+Route::post('/markers/delete', [MarkerController::class, 'destroy'])->name('markers.destroy');
+
+Route::get('/markers/{disease}', [MarkerController::class, 'showByDisease']);
+Route::get('/', [MarkerController::class, 'index']);

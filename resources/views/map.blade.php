@@ -48,8 +48,8 @@
             maxZoom: 19
         }).addTo(map);
 
-        // Array untuk menyimpan marker yang ditambahkan
-        var markers = [];
+        // Variabel untuk menyimpan marker yang ditambahkan
+        var currentMarker = null;
 
         // Menampilkan marker dari database
         @foreach ($markers as $marker)
@@ -60,9 +60,6 @@
                 }),
                 id: {{ $marker->id }} // Simpan ID marker untuk penghapusan
             }).addTo(map).bindPopup('<b>{{ $marker->quarantine }}</b><br>{{ $marker->commodity }}<br>{{ $marker->disease }}<br>{{ $marker->information }}<br>{{ $marker->date_found }}<br><button onclick="deleteMarker({{ $marker->id }})">Hapus</button> <button onclick="updateMarker({{ $marker->id }})">Update</button>');
-
-            // Simpan marker ke dalam array
-            markers.push(marker);
         @endforeach
 
         // Event listener untuk menangkap klik pada peta
@@ -75,9 +72,13 @@
             document.querySelector('input[name="latitude"]').value = lat;
             document.querySelector('input[name="longitude"]').value = lng;
 
+            // Jika sudah ada marker sebelumnya, hapus marker tersebut
+            if (currentMarker ) {
+                map.removeLayer(currentMarker);
+            }
+
             // Tambahkan marker baru di lokasi yang diklik
-            var newMarker = L.marker([lat, lng]).addTo(map).bindPopup('Koordinat: ' + lat + ', ' + lng + '<br><button onclick="deleteNewMarker(this)">Hapus</button> <button onclick="updateNewMarker(this)">Update</button>').openPopup();
-            markers.push(newMarker); // Simpan marker baru ke dalam array
+            currentMarker = L.marker([lat, lng]).addTo(map).bindPopup('Koordinat: ' + lat + ', ' + lng + '<br><button onclick="deleteNewMarker(this)">Hapus</button> <button onclick="updateNewMarker(this)">Update</button>').openPopup();
         });
 
         // Fungsi untuk menghapus marker
@@ -95,19 +96,32 @@
                         },
                         body: JSON.stringify({ id: id })
                     }).then(response => response.json())
-                      .then(data => {
-                          if (data.success) {
-                              console.log('Marker berhasil dihapus');
-                          } else {
-                              console.error('Gagal menghapus marker');
-                          }
-                      });
+                    .then(data => {
+                        if (data.success) {
+                            console.log('Marker berhasil dihapus');
+                        } else {
+                            console.error('Gagal menghapus marker', data);
+                        }
+                    }).catch(error => {
+                        console.error('Error:', error);
+                    });
+                } else {
+                    console.error('Marker tidak ditemukan');
                 }
             }
         }
 
+        // Fungsi untuk menghapus marker baru
+        function deleteNewMarker(button) {
+            if (confirm("Apakah Anda yakin ingin menghapus marker ini?")) {
+                map.removeLayer(currentMarker);
+                currentMarker = null; // Reset marker saat ini
+                console.log('Marker baru berhasil dihapus');
+            }
+        }
+
         // Fungsi untuk memperbarui marker
-        function updateMarker(id, button) {
+        function updateMarker(id) {
             var marker = markers.find(m => m.options.id === id);
             if (marker) {
                 var popupContent = '<form id="updateForm">' +
@@ -124,14 +138,6 @@
                     '</form>';
 
                 marker.bindPopup(popupContent).openPopup();
-
-                // Tambahkan event listener untuk menghentikan propagasi
-                const updateButton = marker.getPopup().getContent().querySelector('button[type="submit"]');
-                if (updateButton) {
-                    updateButton.addEventListener('click', function(e) {
-                        e.stopPropagation();
-                    });
-                }
 
                 // Tangani pengiriman form
                 document.getElementById('updateForm').onsubmit = function(e) {
@@ -158,7 +164,7 @@
                     }).then(response => response.json())
                     .then(data => {
                         if (data.success) {
-                            marker.setPopupContent('<b>' + updatedData.quarantine + '</b><br>' + updatedData.commodity + '<br>' + updatedData.disease + '<br>' + updatedData.information + '<br>' + updatedData.date_found + '<br><button onclick="deleteMarker(' + id + ')">Hapus</button> <button onclick="updateMarker(' + id + ', this)">Update</button>');
+                            marker.setPopupContent('<b>' + updatedData.quarantine + '</b><br>' + updatedData.commodity + '<br>' + updatedData.disease + '<br>' + updatedData.information + '<br>' + updatedData.date_found + '<br><button onclick="deleteMarker(' + id + ')">Hapus</button> <button onclick="updateMarker(' + id + ')">Update</button>');
                             console.log('Marker berhasil diperbarui');
                         } else {
                             console.error('Gagal memperbarui marker');
@@ -168,16 +174,8 @@
             }
         }
 
-        function deleteNewMarker(button) {
-            if (confirm("Apakah Anda yakin ingin menghapus marker ini?")) {
-                var marker = button.closest('.leaflet-popup')._source;
-                map.removeLayer(marker);
-                markers = markers.filter(m => m !== marker);
-            }
-        }
-
         function updateNewMarker(button) {
-            var marker = button.closest('.leaflet-popup')._source;
+            var marker = currentMarker;
             var latLng = marker.getLatLng();
             var popupContent = '<form id="newUpdateForm">' +
                 '<input type="text" name="quarantine" placeholder="Nama Karantina" required>' +
@@ -185,7 +183,7 @@
                 '<input type="text" name="disease" placeholder="Nama Penyakit" required>' +
                 '<textarea name="information" placeholder="Informasi" rows="4" style="width: 90%;"></textarea>' +
                 '<select name="color" required>' +
-                    '<option value="red">Positif</option>' +
+                    '<option value="red"> Positif</option>' +
                     '<option value="green">Negatif</option>' +
                 '</select>' +
                 '<input type="date" name="date_found" required>' +
