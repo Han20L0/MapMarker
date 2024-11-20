@@ -7,62 +7,132 @@
     <title>Web Map</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+
+        #dataPopup {
+            position: fixed;
+            top: 0;
+            left: -300px;
+            width: 300px;
+            height: 50%;
+            background-color: aqua;
+            transition: left 0.3s ease;
+            z-index: 1000;
+            padding: 20px;
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.5);
+        }
+
+        #dataPopup.open {
+            left: 0;
+        }
+
+        #mapContainer {
+            width: 100%;
+            height: 90vh;
+            background-color: brown;
+            position: relative;
+        }
+
+        #map {
+            height: 100%;
+            width: 100%;
+        }
+
+        #toggleButton {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 1001;
+            padding: 10px;
+            background-color: darkblue;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        #filterButton {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 1001;
+            padding: 10px;
+            background-color: green;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        #mapHeader {
+            background-color: chartreuse;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 50px;
+        }
+
+        .custom-icon {
+            /* Anda dapat menambahkan gaya CSS untuk ikon di sini jika diperlukan */
+        }
+    </style>
 </head>
 
 <body>
-    <div style="display: flex;">
-        <div style="background-color: aqua; width: 20%; height:100%">
-            <h2>Input Data</h2>
-            <select id="diseaseFilter">
-                <option value="">Semua Penyakit</option>
-                @foreach ($markers as $marker)
-                <option value="{{ $marker->disease }}">{{ $marker->disease }}</option>
-                @endforeach
+    <div id="dataPopup">
+        <h2>Input Data</h2>
+        <form action="/markers" method="POST" enctype="multipart/form-data">
+            <!-- Tambahkan enctype -->
+            @csrf
+            <input type="text" name="quarantine" placeholder="Nama Karantina" required>
+            <input type="text" name="commodity" placeholder="Komoditas" required>
+            <input type="text" name="disease" placeholder="Nama Penyakit" required>
+            <textarea name="information" placeholder="Informasi" rows="6" style="width: 90%;"></textarea>
+            <select name="color" required>
+                <option value="red">Positif</option>
+                <option value="green">Negatif</option>
             </select>
-            <form action="/markers" method="POST">
-                @csrf
-                <input type="text" name="quarantine" placeholder="Nama Karantina" required>
-                <input type="text" name="commodity" placeholder="Komoditas" required>
-                <input type="text" name="disease" placeholder="Nama Penyakit" required>
-                <textarea name="information" placeholder="Informasi" rows="6" style="width: 90%;"></textarea>
-                <select name="color" required>
-                    <option value="red">Positif</option>
-                    <option value="green">Negatif</option>
-                </select>
-                <input type="date" name="date_found" required>
-                <input type="text" name="latitude" placeholder="Latitude" required readonly>
-                <input type="text" name="longitude" placeholder="Longitude" required readonly>
-                <button type="submit">Tambah Marker</button>
-            </form>
+            <input type="date" name="date_found" required>
+            <input type="text" name="latitude" placeholder="Latitude" required readonly>
+            <input type="text" name="longitude" placeholder="Longitude" required readonly>
+            <input type="file" name="photo" accept="image/*" required> <!-- Input untuk foto -->
+            <button type="submit">Tambah Marker</button>
+        </form>
+    </div>
+    <div id="mapContainer">
+        <div id="mapHeader">
+            <h2>Map Location</h2>
         </div>
-        <div style="margin-left: 0%; background-color:brown; width: 80%; height:100%">
-            <h2>Map</h2>
-            <div id="map" style="height: 600px; width: 100%;"></div>
-        </div>
+        <div id="map"></div>
     </div>
 
     <script>
         // Inisialisasi peta
-        var map = L.map('map').setView([-0.5, 113.5], 6);
+        var map = L.map('map', {zoomControl:false}).setView([-0.5, 113.5], 6);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19
         }).addTo(map);
 
-        // Array untuk menyimpan marker yang ditambahkan
-        var markers = [];
+        // Tambahkan kontrol zoom di sebelah kanan
+        L.control.zoom({
+        position: 'topright' // Posisi kontrol zoom di kanan atas
+        }).addTo(map);
+
+        // Variabel untuk menyimpan marker yang ditambahkan
+        var markers = []; // Array untuk menyimpan semua marker
+        var lastMarker; // Variabel untuk menyimpan marker terakhir yang ditambahkan
 
         // Menampilkan marker dari database
         @foreach ($markers as $marker)
             var marker = L.marker([{{ $marker->latitude }}, {{ $marker->longitude }}], {
                 icon: L.divIcon({
                     className: 'custom-icon',
-                    html: '<div style="background-color: {{ $marker->color }}; width: 20px; height: 20px; border-radius: 50%;"></div>'
-                }),
-                id: {{ $marker->id }} // Simpan ID marker untuk penghapusan
-            }).addTo(map).bindPopup('<b>{{ $marker->quarantine }}</b><br>{{ $marker->commodity }}<br>{{ $marker->disease }}<br>{{ $marker->information }}<br>{{ $marker->date_found }}<br><button onclick="deleteMarker({{ $marker->id }})">Hapus</button> <button onclick="updateMarker({{ $marker->id }})">Update</button>');
-
-            // Simpan marker ke dalam array
-            markers.push(marker);
+                    html: '<div style="background-color: {{ $marker->color }}; width : 20px; height: 20px ; border-radius:50%; border: 2px solid rgb(0, 0, 0);"></div>'
+                })
+            }).addTo(map).bindPopup('<b>{{ $marker->quarantine }}</b><br>{{ $marker->commodity }}<br>{{ $marker->disease }}<br>{{ $marker->information }}<br>{{ $marker->date_found }}<br><img src="{{ asset('storage/' . $marker->photo_path) }}" alt="Foto" style="width:100%; height:auto;">');
+            markers.push({ marker: marker, disease: '{{ $marker->disease }}' }); // Simpan marker dan penyakitnya
         @endforeach
 
         // Event listener untuk menangkap klik pada peta
@@ -75,157 +145,42 @@
             document.querySelector('input[name="latitude"]').value = lat;
             document.querySelector('input[name="longitude"]').value = lng;
 
-            // Tambahkan marker baru di lokasi yang diklik
-            var newMarker = L.marker([lat, lng]).addTo(map).bindPopup('Koordinat: ' + lat + ', ' + lng + '<br><button onclick="deleteNewMarker(this)">Hapus</button> <button onclick="updateNewMarker(this)">Update</button>').openPopup();
-            markers.push(newMarker); // Simpan marker baru ke dalam array
+            // Tampilkan popup input data
+            var dataPopup = document.getElementById('dataPopup');
+            dataPopup.classList.add('open'); // Tampilkan popup
+
+            // Hapus marker terakhir jika ada
+            if (lastMarker) {
+                map.removeLayer(lastMarker);
+            }
+
+            // Tambahkan marker baru ke peta
+            lastMarker = L.marker([lat, lng]).addTo(map);
+            lastMarker.bindPopup('Koordinat: ' + lat + ', ' + lng).openPopup();
         });
 
-        // Fungsi untuk menghapus marker
-        function deleteMarker(id) {
-            if (confirm("Apakah Anda yakin ingin menghapus marker ini?")) {
-                var marker = markers.find(m => m.options.id === id);
-                if (marker) {
-                    map.removeLayer(marker);
-                    markers = markers.filter(m => m !== marker);
-                    fetch('/markers/delete', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                        },
-                        body: JSON.stringify({ id: id })
-                    }).then(response => response.json())
-                      .then(data => {
-                          if (data.success) {
-                              console.log('Marker berhasil dihapus');
-                          } else {
-                              console.error('Gagal menghapus marker');
-                          }
-                      });
+        // Event listener untuk tombol toggle
+        document.getElementById('toggleButton').addEventListener('click', function() {
+            var dataPopup = document.getElementById('dataPopup');
+            dataPopup.classList.toggle('open'); // Tambah atau hapus kelas 'open'
+        });
+
+        // Event listener untuk tombol filter
+        document.getElementById('filterButton').addEventListener('click', function() {
+            var selectedDisease = document.getElementById('diseaseFilter').value;
+
+            // Hapus semua marker dari peta
+            markers.forEach(function(item) {
+                map.removeLayer(item.marker);
+            });
+
+            // Tampilkan marker yang sesuai dengan penyakit yang dipilih
+            markers.forEach(function(item) {
+                if (selectedDisease === "" || item.disease === selectedDisease) {
+                    item.marker.addTo(map);
                 }
-            }
-        }
-
-        // Fungsi untuk memperbarui marker
-        function updateMarker(id, button) {
-            var marker = markers.find(m => m.options.id === id);
-            if (marker) {
-                var popupContent = '<form id="updateForm">' +
-                    '<input type="text" name="quarantine" placeholder="Nama Karantina" required>' +
-                    '<input type="text" name="commodity" placeholder="Komoditas" required>' +
-                    '<input type="text" name="disease" placeholder="Nama Penyakit" required>' +
-                    '<textarea name="information" placeholder="Informasi" rows="4" style="width: 90%;"></textarea>' +
-                    '<select name="color" required>' +
-                        '<option value="red">Positif</option>' +
-                        '<option value="green">Negatif</option>' +
-                    '</select>' +
-                    '<input type="date" name="date_found" required>' +
-                    '<button type="submit">Update</button>' +
-                    '</form>';
-
-                marker.bindPopup(popupContent).openPopup();
-
-                // Tambahkan event listener untuk menghentikan propagasi
-                const updateButton = marker.getPopup().getContent().querySelector('button[type="submit"]');
-                if (updateButton) {
-                    updateButton.addEventListener('click', function(e) {
-                        e.stopPropagation();
-                    });
-                }
-
-                // Tangani pengiriman form
-                document.getElementById('updateForm').onsubmit = function(e) {
-                    e.preventDefault();
-                    var formData = new FormData(this);
-                    var updatedData = {
-                        id: id,
-                        quarantine: formData.get('quarantine'),
-                        commodity: formData.get('commodity'),
-                        disease: formData.get('disease'),
-                        information: formData.get('information'),
-                        color: formData.get('color'),
-                        date_found: formData.get('date_found')
-                    };
-
-                    // Kirim permintaan ke backend untuk memperbarui data marker
-                    fetch('/markers/update', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                        },
-                        body: JSON.stringify(updatedData)
-                    }).then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            marker.setPopupContent('<b>' + updatedData.quarantine + '</b><br>' + updatedData.commodity + '<br>' + updatedData.disease + '<br>' + updatedData.information + '<br>' + updatedData.date_found + '<br><button onclick="deleteMarker(' + id + ')">Hapus</button> <button onclick="updateMarker(' + id + ', this)">Update</button>');
-                            console.log('Marker berhasil diperbarui');
-                        } else {
-                            console.error('Gagal memperbarui marker');
-                        }
-                    });
-                };
-            }
-        }
-
-        function deleteNewMarker(button) {
-            if (confirm("Apakah Anda yakin ingin menghapus marker ini?")) {
-                var marker = button.closest('.leaflet-popup')._source;
-                map.removeLayer(marker);
-                markers = markers.filter(m => m !== marker);
-            }
-        }
-
-        function updateNewMarker(button) {
-            var marker = button.closest('.leaflet-popup')._source;
-            var latLng = marker.getLatLng();
-            var popupContent = '<form id="newUpdateForm">' +
-                '<input type="text" name="quarantine" placeholder="Nama Karantina" required>' +
-                '<input type="text" name="commodity" placeholder="Komoditas" required>' +
-                '<input type="text" name="disease" placeholder="Nama Penyakit" required>' +
-                '<textarea name="information" placeholder="Informasi" rows="4" style="width: 90%;"></textarea>' +
-                '<select name="color" required>' +
-                    '<option value="red">Positif</option>' +
-                    '<option value="green">Negatif</option>' +
-                '</select>' +
-                '<input type="date" name="date_found" required>' +
-                '<button type="submit">Update</button>' +
-                '</form>';
-
-            marker.bindPopup(popupContent).openPopup();
-
-            document.getElementById('newUpdateForm').onsubmit = function(e) {
-                e.preventDefault();
-                var formData = new FormData(this);
-                var updatedData = {
-                    latitude: latLng.lat,
-                    longitude: latLng.lng,
-                    quarantine: formData.get('quarantine'),
-                    commodity: formData.get('commodity'),
-                    disease: formData.get('disease'),
-                    information: formData.get('information'),
-                    color: formData.get('color'),
-                    date_found: formData.get('date_found')
-                };
-
-                fetch('/markers/update', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                    },
-                    body: JSON.stringify(updatedData)
-                }).then(response => response.json())
-                  .then(data => {
-                      if (data.success) {
-                          marker.setPopupContent('<b>' + updatedData.quarantine + '</b><br>' + updatedData.commodity + '<br>' + updatedData.disease + '<br>' + updatedData.information + '<br>' + updatedData.date_found + '<br><button onclick="deleteNewMarker(this)">Hapus</button> <button onclick="updateNewMarker(this)">Update</button>');
-                          console.log('Marker berhasil diperbarui');
-                      } else {
-                          console.error('Gagal memperbarui marker');
-                      }
-                  });
-            };
-        }
+            });
+        });
     </script>
 </body>
 

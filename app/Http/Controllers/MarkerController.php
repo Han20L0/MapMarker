@@ -14,21 +14,29 @@ class MarkerController extends Controller
     }
 
     public function store(Request $request)
-    {
-        $request->validate([
-            'quarantine' => 'required',
-            'commodity' => 'required',
-            'disease' => 'required',
-            'information' => 'nullable',
-            'color' => 'required|in:red,green',
-            'date_found' => 'required|date',
-            'latitude' => 'required|numeric',
-            'longitude' => 'required|numeric',
-        ]);
+{
+    $request->validate([
+        'quarantine' => 'required',
+        'commodity' => 'required',
+        'disease' => 'required',
+        'information' => 'nullable',
+        'color' => 'required|in:red,green',
+        'date_found' => 'required|date',
+        'latitude' => 'required|numeric',
+        'longitude' => 'required|numeric',
+        'photo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048', // Validasi foto
+    ]);
 
-        Marker::create($request->all());
-        return redirect()->back();
+    // Simpan foto di folder default
+    if ($request->hasFile('photo')) {
+        $photoPath = $request->file('photo')->store('photos', 'public'); // Simpan di folder storage/app/public/photos
     }
+
+    // Buat marker dengan path foto
+    Marker::create(array_merge($request->all(), ['photo_path' => $photoPath]));
+
+    return redirect()->back()->with('success', 'Marker berhasil ditambahkan!');
+}
 
     public function showByDisease($disease)
     {
