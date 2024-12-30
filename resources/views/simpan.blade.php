@@ -14,7 +14,21 @@
             background-color: #f0f0f0;
         }
 
-        #dataPopup,
+        #dataPopup {
+            position: fixed;
+            top: 0;
+            left: -350px;
+            width: 300px;
+            height: 100%;
+            background-color: #142e34;
+            transition: left 0.3s ease;
+            z-index: 1000;
+            padding: 20px;
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.5);
+            color: white;
+            overflow-y: auto;
+        }
+
         #infoOverlay {
             position: fixed;
             top: 0;
@@ -30,15 +44,22 @@
             overflow-y: auto;
         }
 
-        #dataContainer,
-        #infoContainer {
+        #dataContainer {
             display: flex;
             flex-direction: row;
             justify-content: flex-start;
             align-items: center;
+            /* background-color: #111111; */
         }
 
-        #dataPopup.open,
+        #infoContainer {
+            /* background-color: #111331; */
+        }
+
+        #dataPopup.open {
+            left: 0;
+        }
+
         #infoOverlay.open {
             left: 0;
         }
@@ -127,7 +148,9 @@
             margin-right: 30px;
             margin-bottom: 10px;
             width: 20%;
+            /* Atur lebar logo sesuai kebutuhan */
             max-width: 100px;
+            /* Atur lebar maksimum logo */
         }
     </style>
 </head>
@@ -136,7 +159,7 @@
     <div id="dataPopup">
         <span class="close-popup" onclick="closePopup()">&times;</span>
         <div id="dataContainer">
-            <img id="logo" src="{{ asset('img/Logo_Barantin.png') }}" alt="Logo">
+            <img id="logo" src="{{asset('img/Logo_Barantin.png')}}">
             <h2>Input Data</h2>
         </div>
         <div id="infoContainer">
@@ -145,7 +168,7 @@
                 <input type="text" name="quarantine" placeholder="Nama Karantina" required>
                 <input type="text" name="commodity" placeholder="Komoditas" required>
                 <input type="text" name="disease" placeholder="Nama Penyakit" required>
-                <textarea name="information" placeholder="Informasi" rows="6"></textarea>
+                <textarea name="information" placeholder="Informasi" rows="6" ;"></textarea>
                 <select name="color" required>
                     <option value="red">Positif</option>
                     <option value="green">Negatif</option>
@@ -154,24 +177,15 @@
                 <input type="text" name="latitude" placeholder="Latitude" required readonly>
                 <input type="text" name="longitude" placeholder="Longitude" required readonly>
                 <input type="file" name="photo" accept="image/*">
+                <!-- Input untuk foto -->
                 <button type="submit">Tambah Marker</button>
             </form>
         </div>
     </div>
     <div id="infoOverlay">
         <span class="close-popup" onclick="closeInfoOverlay()">&times;</span>
-        <div id="dataContainer">
-            <img id="logo" src="{{ asset('img/Logo_Barantin.png') }}" alt="Logo">
-            <h2>Information</h2>
-        </div>
-        <div id="infoContainer">
-            <p id="infoContentQuarantine"></p>
-            <p id="infoContentCommodity"></p>
-            <p id="infoContentDisease"></p>
-            <p id="infoContentInformation"></p>
-            <p id="infoContentDateFound"></p>
-            <img id="infoContentPhoto" src="" alt="Foto" style="width:100%; height:auto;">
-        </div>
+        <h2>Information</h2>
+        <div id="infoContent"></div>
     </div>
     <div id="mapContainer">
         <div id="mapHeader">
@@ -226,33 +240,51 @@
                 map.removeLayer(lastMarker);
             }
 
-            // Buat marker baru
+            // Tambahkan marker baru ke peta
             lastMarker = L.marker([lat, lng]).addTo(map);
+            lastMarker.bindPopup('Koordinat: ' + lat + ', ' + lng).openPopup();
         });
 
-        // Event listener untuk menangkap klik pada marker
-        markers.forEach(function(markerObj) {
-            markerObj.marker.on('click', function() {
-                // Ambil data dari marker yang diklik
-                document.getElementById('infoContentQuarantine').innerText = 'Nama Karantina: ' + markerObj.info.quarantine;
-                document.getElementById('infoContentCommodity').innerText = 'Komoditas: ' + markerObj.info.commodity;
-                document.getElementById('infoContentDisease').innerText = 'Nama Penyakit: ' + markerObj.info.disease;
-                document.getElementById('infoContentInformation').innerText = 'Informasi: ' + markerObj.info.information;
-                document.getElementById('infoContentDateFound').innerText = 'Tanggal Ditemukan: ' + markerObj.info.date_found;
-                document.getElementById('infoContentPhoto').src = '{{ asset('storage/') }}' + markerObj.photo_path;
-
-                // Tampilkan overlay informasi
+        // Event listener untuk marker yang diklik
+        markers.forEach(function(item) {
+            item.marker.on('click', function() {
+                document.getElementById('infoContent').innerHTML = item.info; // Tampilkan informasi marker
                 var infoOverlay = document.getElementById('infoOverlay');
-                infoOverlay.classList.add('open'); // Tampilkan overlay
+                infoOverlay.classList.add('open'); // Tampilkan overlay informasi
+                item.marker.closePopup(); // Tutup popup di titik marker
+                var dataPopup = document.getElementById('dataPopup');
+                dataPopup.classList.remove('open'); // Tutup input data overlay
+                if (lastMarker) {
+                    map.removeLayer(lastMarker); // Hapus marker yang dibuat ketika mengklik titik kosong
+                    lastMarker = null; // Reset lastMarker
+                }
             });
         });
 
-        function closePopup() {
-            document.getElementById('dataPopup').classList.remove('open');
+        // Event listener untuk mengklik peta
+        map.on('click', function(e) {
+            if (lastMarker) {
+                map.removeLayer(lastMarker); // Hapus marker yang dibuat sebelumnya
+                lastMarker = null; // Reset lastMarker
+            }
+            var infoOverlay = document.getElementById('infoOverlay');
+            infoOverlay.classList.remove('open'); // Tutup overlay informasi
+            var dataPopup = document.getElementById('dataPopup');
+            dataPopup.classList.add('open'); // Tampilkan overlay input data
+            // Buat marker baru di titik yang diklik
+            lastMarker = L.marker(e.latlng).addTo(map);
+        });
+
+        // Fungsi untuk menutup overlay informasi
+        function closeInfoOverlay() {
+            var infoOverlay = document.getElementById('infoOverlay');
+            infoOverlay.classList.remove('open'); // Hapus kelas 'open' untuk menyembunyikan overlay
         }
 
-        function closeInfoOverlay() {
-            document.getElementById('infoOverlay').classList.remove('open');
+        // Fungsi untuk menutup popup
+        function closePopup() {
+            var dataPopup = document.getElementById('dataPopup');
+            dataPopup.classList.remove('open'); // Hapus kelas 'open' untuk menyembunyikan popup
         }
     </script>
 </body>

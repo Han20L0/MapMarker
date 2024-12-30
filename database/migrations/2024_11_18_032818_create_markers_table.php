@@ -13,7 +13,7 @@ return new class extends Migration
 {
     Schema::create('markers', function (Blueprint $table) {
         $table->id();
-        $table->string('quarantine');
+        $table->enum('quarantine', ['Karantina Hewan', 'Karantina Ikan', 'Karantina Tumbuhan']);
         $table->string('commodity');
         $table->string('disease');
         $table->string('information');
