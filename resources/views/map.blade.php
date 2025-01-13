@@ -6,6 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Web Map</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Myriad+Pro:wght@700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Frutiger:wght@700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <style>
         body {
@@ -15,6 +20,7 @@
         }
 
         #dataPopup,
+        #editPopup,
         #infoOverlay {
             position: fixed;
             top: 0;
@@ -34,8 +40,11 @@
             display: flex;
             flex-direction: column;
             justify-content: flex-start;
-            align-items: center;
-            /* background-color: #f0f0f0; */
+            align-items: baseline;
+            background-color: #f0f0f0;
+            height: 85%;
+            width: 100%;
+
         }
 
         #h2Container {
@@ -46,6 +55,7 @@
         }
 
         #dataPopup.open,
+        #editPopup.open,
         #infoOverlay.open {
             left: 0;
         }
@@ -98,6 +108,23 @@
             font-size: 20px;
         }
 
+        #buttons-container {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+        }
+
+        #buttons {
+            width: 40%;
+        }
+
+        #photo-container {
+            display: flex;
+            width: 100%;
+            height: 280px;
+            background-color: #2980b9;
+        }
+
         h2 {
             margin: 0;
             font-size: 1.5em;
@@ -112,6 +139,12 @@
             border: none;
             border-radius: 5px;
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+        }
+
+        h2 {
+            font-family: 'Manrope', sans-serif;
+            font-size: 24px;
+            color: #f0f0f0;
         }
 
         button {
@@ -149,9 +182,16 @@
         <div id="infoContainer">
             <form action="/markers" method="POST" enctype="multipart/form-data">
                 @csrf
-                <input type="text" name="quarantine" placeholder="Nama Karantina" required>
+                <select name="quarantine" id="quarantineSelect" required onchange="updateDiseaseOptions()">
+                    <option value="">Pilih Karantina</option>
+                    <option value="Karantina Hewan">Karantina Hewan</option>
+                    <option value="Karantina Ikan">Karantina Ikan</option>
+                    <option value="Karantina Tumbuhan">Karantina Tumbuhan</option>
+                </select>
+                <select name="disease" id="diseaseSelect" required>
+                    <option value="">Pilih Penyakit</option>
+                </select>
                 <input type="text" name="commodity" placeholder="Komoditas" required>
-                <input type="text" name="disease" placeholder="Nama Penyakit" required>
                 <textarea name="information" placeholder="Informasi" rows="6"></textarea>
                 <select name="color" required>
                     <option value="red">Positif</option>
@@ -169,7 +209,7 @@
         <span class="close-popup" onclick="closeInfoOverlay()">&times;</span>
         <div id="h2Container">
             <img id="logo" src="{{ asset('img/Logo_Barantin.png') }}" alt="Logo">
-            <h2>Information</h2>
+            <h2 style="">Information</h2>
         </div>
         <div id="infoContainer">
             <p id="infoContentQuarantine"></p>
@@ -177,8 +217,45 @@
             <p id="infoContentDisease"></p>
             <p id="infoContentInformation"></p>
             <p id="infoContentDateFound"></p>
-            <img id="infoContentPhoto" src="" alt="Foto" style="width:100%; height:auto;">
+            <div id="photo-container">
+                <img id="infoContentPhoto" src="" alt="Foto" style="width:100%; height:auto;">
+            </div>
+            <div id="buttons-container">
+                <form id="deleteForm" action="{{ route('markers.destroy') }}" method="POST" style="display:inline;"
+                    onsubmit="return confirmDelete(event, this);">
+                    @csrf
+                    <input type="hidden" name="id" id="deleteMarkerId">
+                    <button type="submit">Hapus Marker</button>
+                </form>>
+                <button id="editButton" onclick="openEditPopup()">Edit Marker</button>
+            </div>
         </div>
+    </div>
+    <div id="editPopup">
+        <span class="close-popup" onclick="closeEditPopup()">&times;</span>
+        <h2>Edit Data Marker</h2>
+        <form id="editForm" action="/markers/update" method="POST" enctype="multipart/form-data">
+            @csrf
+            <input type="hidden" name="id" id="editMarkerId">
+            <select name="quarantine" id="editQuarantineSelect" required onchange="updateDiseaseOptionsEdit()">
+                <option value="">Pilih Karantina</option>
+                <option value="Karantina Hewan">Karantina Hewan</option>
+                <option value="Karantina Ikan">Karantina Ikan</option>
+                <option value="Karantina Tumbuhan">Karantina Tumbuhan</option>
+            </select>
+            <select name="disease" id="editDiseaseSelect" required>
+                <option value="">Pilih Penyakit</option>
+            </select>
+            <input type="text" name="commodity" id="editCommodity" placeholder="Komoditas" required>
+            <textarea name="information" id="editInformation" placeholder="Informasi" rows="6"></textarea>
+            <select name="color" id="editColor" required>
+                <option value="red">Positif</option>
+                <option value="green">Negatif</option>
+            </select>
+            <input type="date" name="date_found" id="editDateFound" required>
+            <input type="file" name="photo" accept="image/*">
+            <button type="submit">Update Marker</button>
+        </form>
     </div>
     <div id="mapContainer">
         <div id="mapHeader">
@@ -213,6 +290,7 @@
             }).addTo(map);
 
             markers.push({
+                id: '{{ $marker->id }}', // Tambahkan ID marker
                 quarantine: '{{ $marker->quarantine }}',
                 commodity: '{{ $marker->commodity }}',
                 disease: '{{ $marker->disease }}',
@@ -236,7 +314,11 @@
                     document.getElementById('infoContentDisease').innerText = 'Nama Penyakit: ' + markerObj.disease;
                     document.getElementById('infoContentInformation').innerText = 'Informasi: ' + markerObj.information;
                     document.getElementById('infoContentDateFound').innerText = 'Tanggal Ditemukan: ' + markerObj.date_found;
-                    document.getElementById('infoContentPhoto').src = '{{ asset('storage/photos/') }}' + markerObj.photo_path;
+                    document.getElementById('infoContentPhoto').src = '{{ asset('storage/') }}' + markerObj.photo_path;
+
+                    // Set ID marker yang akan dihapus
+                    document.getElementById('deleteMarkerId').value = markerObj.id;
+
 
                     // Tampilkan overlay informasi
                     var infoOverlay = document.getElementById('infoOverlay');
@@ -275,22 +357,67 @@
             lastMarker = L.marker(e.latlng).addTo(map);
         });
 
-        // Event listener untuk menangkap klik pada marker
-        markers.forEach(function(markerObj) {
-            markerObj.marker.on('click', function() {
-                // Ambil data dari marker yang diklik
-                document.getElementById('infoContentQuarantine').innerText = 'Nama Karantina: ' + markerObj.quarantine;
-                document.getElementById('infoContentCommodity').innerText = 'Komoditas: ' + markerObj.commodity;
-                document.getElementById('infoContentDisease').innerText = 'Nama Penyakit: ' + markerObj.disease;
-                document.getElementById('infoContentInformation').innerText = 'Informasi: ' + markerObj.information;
-                document.getElementById('infoContentDateFound').innerText = 'Tanggal Ditemukan: ' + markerObj.date_found;
-                document.getElementById('infoContentPhoto').src = '{{ asset('storage/') }}' + markerObj.photo_path;
+        function updateDiseaseOptions() {
+            var quarantineSelect = document.getElementById('quarantineSelect');
+            var diseaseSelect = document.getElementById('diseaseSelect');
+            var selectedQuarantine = quarantineSelect.value;
 
-                // Tampilkan overlay informasi
-                var infoOverlay = document.getElementById('infoOverlay');
-                infoOverlay.classList.add('open'); // Tampilkan overlay
-            });
-        });
+            // Kosongkan pilihan penyakit
+            diseaseSelect.innerHTML = '<option value="">Pilih Penyakit</option>';
+
+            // Tambahkan pilihan penyakit berdasarkan pilihan karantina
+            if (selectedQuarantine === 'Karantina Hewan') {
+                diseaseSelect.innerHTML += '<option value="Notifiable Avian Influenza">Notifiable Avian Influenza</option>';
+                diseaseSelect.innerHTML += '<option value="Rabies">Rabies</option>';
+                diseaseSelect.innerHTML += '<option value="Foot and Mouth Disease">Foot and Mouth Disease</option>';
+                diseaseSelect.innerHTML += '<option value="Brucellosis">Brucellosis</option>';
+                diseaseSelect.innerHTML += '<option value="Lumpy Skin Disease">Lumpy Skin Disease</option>';
+                diseaseSelect.innerHTML += '<option value="African Swine Fever">African Swine Fever</option>';
+            } else if (selectedQuarantine === 'Karantina Ikan') {
+                diseaseSelect.innerHTML += '<option value="AHPND (Acute Hepatopancreatic Necrosis Disease)">AHPND (Acute Hepatopancreatic Necrosis Disease)</option>';
+                diseaseSelect.innerHTML += '<option value="TSV (Infection with Taura Syndrome Virus)">TSV (Infection with Taura Syndrome Virus)</option>';
+                diseaseSelect.innerHTML += '<option value="WSSV (Infection with White Spot Syndrome Virus)">WSSV (Infection with White Spot Syndrome Virus)</option>';
+                diseaseSelect.innerHTML += '<option value="VER / VNN  (Viral Encephalopathy and Retinopathy / Viral Nervous Necrosis)">VER / VNN (Viral Encephalopathy and Retinopathy / Viral Nervous Necrosis)</option>';
+                diseaseSelect.innerHTML += '<option value="Infection with Macrobachium Rosenbergii Nodavirus (White Tail Disease)">Infection with Macrobachium Rosenbergii Nodavirus (White Tail Disease)</option>';
+            } else if (selectedQuarantine === 'Karantina Tumbuhan') {
+                diseaseSelect.innerHTML += '<option value="South American Leaf Blight">South American Leaf Blight</option>';
+                diseaseSelect.innerHTML += '<option value="Red Palm Weevil">Red Palm Weevil</option>';
+                diseaseSelect.innerHTML += '<option value="Cadang-cadang Viroid">Cadang-cadang Viroid</option>';
+                diseaseSelect.innerHTML += '<option value="Lethal Yellowing">Lethal Yellowing</option>';
+                diseaseSelect.innerHTML += '<option value="Mediterranean Fruit Fly">Mediterranean Fruit Fly</option>';
+            }
+        }
+
+        function updateDiseaseOptionsEdit() {
+            var quarantineSelect = document.getElementById('editQuarantineSelect');
+            var diseaseSelect = document .getElementById('editDiseaseSelect');
+            var selectedQuarantine = quarantineSelect.value;
+
+            // Kosongkan pilihan penyakit sebelumnya
+            diseaseSelect.innerHTML = '<option value="">Pilih Penyakit</option>';
+
+            // Tambahkan pilihan penyakit berdasarkan karantina yang dipilih
+            if (selectedQuarantine === 'Karantina Hewan') {
+                diseaseSelect.innerHTML += '<option value="Notifiable Avian Influenza">Notifiable Avian Influenza</option>';
+                diseaseSelect.innerHTML += '<option value="Rabies">Rabies</option>';
+                diseaseSelect.innerHTML += '<option value="Foot and Mouth Disease">Foot and Mouth Disease</option>';
+                diseaseSelect.innerHTML += '<option value="Brucellosis">Brucellosis</option>';
+                diseaseSelect.innerHTML += '<option value="Lumpy Skin Disease">Lumpy Skin Disease</option>';
+                diseaseSelect.innerHTML += '<option value="African Swine Fever">African Swine Fever</option>';
+            } else if (selectedQuarantine === 'Karantina Ikan') {
+                diseaseSelect.innerHTML += '<option value="AHPND (Acute Hepatopancreatic Necrosis Disease)">AHPND (Acute Hepatopancreatic Necrosis Disease)</option>';
+                diseaseSelect.innerHTML += '<option value="TSV (Infection with Taura Syndrome Virus)">TSV (Infection with Taura Syndrome Virus)</option>';
+                diseaseSelect.innerHTML += '<option value="WSSV (Infection with White Spot Syndrome Virus)">WSSV (Infection with White Spot Syndrome Virus)</option>';
+                diseaseSelect.innerHTML += '<option value="VER / VNN  (Viral Encephalopathy and Retinopathy / Viral Nervous Necrosis">VER / VNN (Viral Encephalopathy and Retinopathy / Viral Nervous Necrosis)</option>';
+                diseaseSelect.innerHTML += '<option value="Infection with Macrobachium Rosenbergii Nodavirus (White Tail Disease ">Infection with Macrobachium Rosenbergii Nodavirus (White Tail Disease)</option>';
+            } else if (selectedQuarantine === 'Karantina Tumbuhan') {
+                diseaseSelect.innerHTML += '<option value="South American Leaf Blight">South American Leaf Blight</option>';
+                diseaseSelect.innerHTML += '<option value="Red Palm Weevil">Red Palm Weevil</option>';
+                diseaseSelect.innerHTML += '<option value="Cadang-cadang Viroid">Cadang-cadang Viroid</option>';
+                diseaseSelect.innerHTML += '<option value="Lethal Yellowing">Lethal Yellowing</option>';
+                diseaseSelect.innerHTML += '<option value="Mediterranean Fruit Fly">Mediterranean Fruit Fly</option>';
+            }
+        }
 
         function closePopup() {
             document.getElementById('dataPopup').classList.remove('open');
@@ -298,6 +425,54 @@
 
         function closeInfoOverlay() {
             document.getElementById('infoOverlay').classList.remove('open');
+        }
+
+        function confirmDelete(event, form) {
+            event.preventDefault(); // Mencegah form dari pengiriman default
+
+            // Ambil ID marker yang akan dihapus
+            var markerId = form.querySelector('#deleteMarkerId').value;
+
+            // Temukan marker yang sesuai dengan ID
+            var markerToDelete = markers.find(markerObj => markerObj.id === markerId);
+
+            if (markerToDelete) {
+                // Hapus marker dari peta
+                map.removeLayer(markerToDelete.marker);
+
+                // Hapus marker dari array markers
+                markers = markers.filter(markerObj => markerObj.id !== markerId);
+
+                // Kirim form untuk menghapus data dari server
+                form.submit();
+            } else {
+                alert('Marker tidak ditemukan.');
+            }
+        }
+
+        function openEditPopup() {
+            var markerId = document.getElementById('deleteMarkerId').value;
+            var markerToEdit = markers.find(markerObj => markerObj.id === markerId);
+
+            if (markerToEdit) {
+                // Isi form edit dengan data marker
+                document.getElementById('editMarkerId').value = markerToEdit.id;
+                document.getElementById('editQuarantineSelect').value = markerToEdit.quarantine;
+                document.getElementById('editCommodity').value = markerToEdit.commodity;
+                document.getElementById('editDiseaseSelect').value = markerToEdit.disease;
+                document.getElementById('editInformation').value = markerToEdit.information;
+                document.getElementById('editColor').value = markerToEdit.color;
+                document.getElementById('editDateFound').value = markerToEdit.date_found;
+
+                // Tampilkan popup edit
+                document.getElementById('editPopup').classList.add('open');
+            } else {
+                alert('Marker tidak ditemukan untuk diedit.');
+            }
+        }
+
+        function closeEditPopup() {
+            document.getElementById('editPopup').classList.remove('open ');
         }
     </script>
 </body>
