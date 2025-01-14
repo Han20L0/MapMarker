@@ -54,6 +54,13 @@
             align-items: center;
         }
 
+        #filterContainer {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 20%;
+        }
+
         #dataPopup.open,
         #editPopup.open,
         #infoOverlay.open {
@@ -145,6 +152,20 @@
             font-family: 'Manrope', sans-serif;
             font-size: 24px;
             color: #f0f0f0;
+            position: absolute;
+        }
+
+        h3 {
+            font-family: 'Manrope', sans-serif;
+            font-size: 24px;
+            color: #f0f0f0;
+        }
+
+        h5 {
+            font-family: 'Manrope', sans-serif;
+            color: #f0f0f0;
+            font-size: 10px;
+            padding-left: 70%;
         }
 
         button {
@@ -174,10 +195,10 @@
 
 <body>
     <div id="dataPopup">
-        <span class="close-popup" onclick="closePopup()">&times;</span>
+        <span class="close-popup" onclick="closeAllPopups()">&times;</span>
         <div id="h2Container">
             <img id="logo" src="{{ asset('img/Logo_Barantin.png') }}" alt="Logo">
-            <h2>Input Data</h2>
+            <h3>Input Data</h3>
         </div>
         <div id="infoContainer">
             <form action="/markers" method="POST" enctype="multipart/form-data">
@@ -206,10 +227,10 @@
         </div>
     </div>
     <div id="infoOverlay">
-        <span class="close-popup" onclick="closeInfoOverlay()">&times;</span>
+        <span class="close-popup" onclick="closeAllPopups()">&times;</span>
         <div id="h2Container">
             <img id="logo" src="{{ asset('img/Logo_Barantin.png') }}" alt="Logo">
-            <h2 style="">Information</h2>
+            <h3>Information</h3>
         </div>
         <div id="infoContainer">
             <p id="infoContentQuarantine"></p>
@@ -232,8 +253,11 @@
         </div>
     </div>
     <div id="editPopup">
-        <span class="close-popup" onclick="closeEditPopup()">&times;</span>
-        <h2>Edit Data Marker</h2>
+        <span class="close-popup" onclick="closeAllPopups()">&times;</span>
+        <div id="h2Container">
+            <img id="logo" src="{{ asset('img/Logo_Barantin.png') }}" alt="Logo">
+            <h3>Edit Data Marker</h3>
+        </div>
         <form id="editForm" action="/markers/update" method="POST" enctype="multipart/form-data">
             @csrf
             <input type="hidden" name="id" id="editMarkerId">
@@ -260,6 +284,46 @@
     <div id="mapContainer">
         <div id="mapHeader">
             <h2>Peta Penyebaran Penyakit Barantin</h2>
+            <h5>Filter Berdasarkan :</h5>
+            <div id="filterContainer">
+                <select id="combinedFilter" onchange="filterMarkers()">
+                    <option value="">Pilih Karantina dan Penyakit</option>
+                    <option value="Karantina Hewan, Notifiable Avian Influenza">Karantina Hewan, Notifiable Avian
+                        Influenza
+                    </option>
+                    <option value="Karantina Hewan, Rabies">Karantina Hewan, Rabies</option>
+                    <option value="Karantina Hewan, Foot and Mouth Disease">Karantina Hewan, Foot and Mouth Disease
+                    </option>
+                    <option value="Karantina Hewan, Brucellosis">Karantina Hewan, Brucellosis</option>
+                    <option value="Karantina Hewan, Lumpy Skin Disease">Karantina Hewan, Lumpy Skin Disease</option>
+                    <option value="Karantina Hewan, African Swine Fever">Karantina Hewan, African Swine Fever</option>
+                    <option value="Karantina Ikan, AHPND (Acute Hepatopancreatic Necrosis Disease)">Karantina Ikan,
+                        AHPND
+                    </option>
+                    <option value="Karantina Ikan, TSV (Infection with Taura Syndrome Virus)">Karantina Ikan, TSV
+                    </option>
+                    <option value="Karantina Ikan, WSSV (Infection with White Spot Syndrome Virus)">Karantina Ikan, WSSV
+                    </option>
+                    <option
+                        value="Karantina Ikan, VER / VNN (Viral Encephalopathy and Retinopathy / Viral Nervous Necrosis)">
+                        Karantina Ikan, VER / VNN</option>
+                    <option
+                        value="Karantina Ikan, Infection with Macrobachium Rosenbergii Nodavirus (White Tail Disease)">
+                        Karantina
+                        Ikan, White Tail Disease</option>
+                    <option value="Karantina Tumbuhan, South American Leaf Blight">Karantina Tumbuhan, South American
+                        Leaf
+                        Blight
+                    </option>
+                    <option value="Karantina Tumbuhan, Red Palm Weevil">Karantina Tumbuhan, Red Palm Weevil</option>
+                    <option value="Karantina Tumbuhan, Cadang-cadang Viroid">Karantina Tumbuhan, Cadang-cadang Viroid
+                    </option>
+                    <option value="Karantina Tumbuhan, Lethal Yellowing">Karantina Tumbuhan, Lethal Yellowing</option>
+                    <option value="Karantina Tumbuhan, Mediterranean Fruit Fly">Karantina Tumbuhan, Mediterranean Fruit
+                        Fly
+                    </option>
+                </select>
+            </div>
         </div>
         <div id="map"></div>
     </div>
@@ -303,6 +367,8 @@
             // Event listener untuk marker yang diklik
             markers.forEach(function(markerObj) {
                 markerObj.marker.on('click', function() {
+                    // Tutup popup edit jika terbuka
+                    closeEditPopup();
                     // Hapus marker terakhir jika ada
                     if (lastMarker) {
                         map.removeLayer(lastMarker); // Hapus marker yang dibuat sebelumnya
@@ -334,6 +400,9 @@
             if (infoOverlay.classList.contains('open')) {
                 infoOverlay.classList.remove('open'); // Tutup overlay informasi
             }
+
+            // Tutup popup edit jika terbuka
+            closeEditPopup();
 
             // Ambil koordinat latitude dan longitude
             var lat = e.latlng.lat;
@@ -419,12 +488,33 @@
             }
         }
 
-        function closePopup() {
-            document.getElementById('dataPopup').classList.remove('open');
-        }
+        function filterMarkers() {
+            var combinedFilter = document.getElementById('combinedFilter').value;
 
-        function closeInfoOverlay() {
-            document.getElementById('infoOverlay').classList.remove('open');
+            // Ambil karantina dan penyakit dari pilihan
+            var [quarantineFilter, diseaseFilter] = combinedFilter.split(', ').map(item => item.trim());
+
+            markers.forEach(function(markerObj) {
+                var marker = markerObj.marker;
+                var showMarker = true;
+
+                // Filter berdasarkan karantina
+                if (quarantineFilter && markerObj.quarantine !== quarantineFilter) {
+                    showMarker = false;
+                }
+
+                // Filter berdasarkan penyakit
+                if (diseaseFilter && markerObj.disease !== diseaseFilter) {
+                    showMarker = false;
+                }
+
+                // Tampilkan atau sembunyikan marker
+                if (showMarker) {
+                    marker.addTo(map); // Tampilkan marker
+                } else {
+                    map.removeLayer(marker); // Sembunyikan marker
+                }
+            });
         }
 
         function confirmDelete(event, form) {
@@ -471,8 +561,29 @@
             }
         }
 
+        function closeAllPopups() {
+            // Tutup semua popup
+            closePopup(); // Menutup dataPopup
+            closeInfoOverlay(); // Menutup infoOverlay
+            closeEditPopup(); // Menutup editPopup
+
+            // Hapus marker terakhir jika ada
+            if (lastMarker) {
+            map.removeLayer(lastMarker); // Hapus marker yang dibuat sebelumnya
+            lastMarker = null; // Reset lastMarker
+            }
+        }
+
+        function closePopup() {
+            document.getElementById('dataPopup').classList.remove('open');
+        }
+
+        function closeInfoOverlay() {
+            document.getElementById('infoOverlay').classList.remove('open');
+        }
+
         function closeEditPopup() {
-            document.getElementById('editPopup').classList.remove('open ');
+            document.getElementById('editPopup').classList.remove('open');
         }
     </script>
 </body>

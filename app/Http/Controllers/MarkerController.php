@@ -12,8 +12,6 @@ class MarkerController extends Controller
         $markers = Marker::all();
         return view('map', compact('markers'));
     }
-
-
     public function store(Request $request)
     {
         $request->validate([
@@ -42,7 +40,6 @@ class MarkerController extends Controller
         // return response()->json(['success' => true, 'marker' => $request->all()]); // Kembalikan respons JSON
         return redirect()->back()->with('success', 'Marker berhasil ditambahkan!');
     }
-
     public function update(Request $request)
     {
         // Validasi input
@@ -85,7 +82,6 @@ class MarkerController extends Controller
         // Redirect atau kembali dengan pesan sukses
         return redirect()->back()->with('success', 'Marker berhasil diperbarui.');
     }
-    // Menghapus marker
     public function destroy(Request $request)
     {
         $request->validate([
