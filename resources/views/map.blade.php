@@ -41,7 +41,7 @@
             flex-direction: column;
             justify-content: flex-start;
             align-items: baseline;
-            background-color: #f0f0f0;
+            /* background-color: #f0f0f0; */
             height: 85%;
             width: 100%;
 
@@ -128,8 +128,9 @@
         #photo-container {
             display: flex;
             width: 100%;
-            height: 280px;
+            height: 35%;
             background-color: #2980b9;
+            margin-bottom: 10px;
         }
 
         h2 {
@@ -152,7 +153,7 @@
             font-family: 'Manrope', sans-serif;
             font-size: 24px;
             color: #f0f0f0;
-            position: absolute;
+            position: fixed;
         }
 
         h3 {
@@ -177,6 +178,8 @@
             cursor: pointer;
             transition: background-color 0.3s;
             width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
         }
 
         button:hover {
@@ -247,7 +250,7 @@
                     @csrf
                     <input type="hidden" name="id" id="deleteMarkerId">
                     <button type="submit">Hapus Marker</button>
-                </form>>
+                </form>
                 <button id="editButton" onclick="openEditPopup()">Edit Marker</button>
             </div>
         </div>
@@ -287,7 +290,7 @@
             <h5>Filter Berdasarkan :</h5>
             <div id="filterContainer">
                 <select id="combinedFilter" onchange="filterMarkers()">
-                    <option value="">Pilih Karantina dan Penyakit</option>
+                    <option value="">Tampilkan Semua</option>
                     <option value="Karantina Hewan, Notifiable Avian Influenza">Karantina Hewan, Notifiable Avian
                         Influenza
                     </option>
@@ -380,7 +383,7 @@
                     document.getElementById('infoContentDisease').innerText = 'Nama Penyakit: ' + markerObj.disease;
                     document.getElementById('infoContentInformation').innerText = 'Informasi: ' + markerObj.information;
                     document.getElementById('infoContentDateFound').innerText = 'Tanggal Ditemukan: ' + markerObj.date_found;
-                    document.getElementById('infoContentPhoto').src = '{{ asset('storage/') }}' + markerObj.photo_path;
+                    document.getElementById('infoContentPhoto').src = '{{ asset('storage') }}/' + markerObj.photo_path;
 
                     // Set ID marker yang akan dihapus
                     document.getElementById('deleteMarkerId').value = markerObj.id;
@@ -549,13 +552,18 @@
                 document.getElementById('editMarkerId').value = markerToEdit.id;
                 document.getElementById('editQuarantineSelect').value = markerToEdit.quarantine;
                 document.getElementById('editCommodity').value = markerToEdit.commodity;
-                document.getElementById('editDiseaseSelect').value = markerToEdit.disease;
                 document.getElementById('editInformation').value = markerToEdit.information;
-                document.getElementById('editColor').value = markerToEdit.color;
                 document.getElementById('editDateFound').value = markerToEdit.date_found;
 
                 // Tampilkan popup edit
                 document.getElementById('editPopup').classList.add('open');
+
+                // Panggil fungsi untuk memperbarui pilihan penyakit berdasarkan karantina yang dipilih
+                updateDiseaseOptionsEdit();
+
+                document.getElementById('editDiseaseSelect').value = markerToEdit.disease;
+
+                document.getElementById('editColor').value = markerToEdit.color;
             } else {
                 alert('Marker tidak ditemukan untuk diedit.');
             }
