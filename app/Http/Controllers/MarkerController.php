@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Marker;
+use Illuminate\Support\Facades\Storage;
 
 class MarkerController extends Controller
 {
